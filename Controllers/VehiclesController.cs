@@ -28,7 +28,12 @@ namespace Vega.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetVehicle(int id)
         {
-            var vehicle = await _context.Vehicles.Include(v => v.Features).SingleOrDefaultAsync(v => v.Id == id);
+            var vehicle = await _context.Vehicles
+                .Include(v => v.Features)
+                    .ThenInclude(vf => vf.Feature)
+                .Include(v => v.Model)
+                    .ThenInclude(m => m.Make)
+                .SingleOrDefaultAsync(v => v.Id == id).ConfigureAwait(false);
 
             if (vehicle == null)
                 return NotFound();
@@ -39,23 +44,23 @@ namespace Vega.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateVehicle(VehicleResource vehicleResource)
+        public async Task<IActionResult> CreateVehicle(SaveVehicleResource vehicleResource)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var vehicle = _mapper.Map<VehicleResource, Vehicle>(vehicleResource);
+            var vehicle = _mapper.Map<SaveVehicleResource, Vehicle>(vehicleResource);
             vehicle.LastUpdate = DateTime.Now;
             _context.Vehicles.Add(vehicle);
             await _context.SaveChangesAsync();
 
-            var result = _mapper.Map<Vehicle, VehicleResource>(vehicle);
+            var result = _mapper.Map<Vehicle, SaveVehicleResource>(vehicle);
 
             return Ok(result);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateVehicle(int id, VehicleResource vehicleResource)
+        public async Task<IActionResult> UpdateVehicle(int id, SaveVehicleResource vehicleResource)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -70,7 +75,7 @@ namespace Vega.Controllers
             
             await _context.SaveChangesAsync();
 
-            var result = _mapper.Map<Vehicle, VehicleResource>(vehicle);
+            var result = _mapper.Map<Vehicle, SaveVehicleResource>(vehicle);
 
             return Ok(result);
         }

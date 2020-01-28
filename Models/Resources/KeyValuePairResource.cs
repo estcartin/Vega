@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Vega.Models.Resources
 {
-    public class FeatureResource
+    public class KeyValuePairResource
     {
         public int Id { get; set; }
 
