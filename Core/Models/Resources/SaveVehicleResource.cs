@@ -1,19 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace Vega.Models.Resources
+namespace Vega.Core.Models.Resources
 {
     public class SaveVehicleResource
     {
         public int Id { get; set; }
 
         public int ModelId { get; set; }
-
-        public Model Model { get; set; }
 
         public bool IsRegistered { get; set; }
 

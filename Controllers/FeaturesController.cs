@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Vega.Models;
-using Vega.Models.Resources;
+using Vega.Core.Models;
+using Vega.Core.Models.Resources;
 using Vega.Persistence;
 
 namespace Vega.Controllers

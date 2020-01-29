@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Vega.Models;
-using Vega.Models.Resources;
-using Vega.Persistence;
+using Vega.Core.Interfaces;
+using Vega.Core.Models;
+using Vega.Core.Models.Resources;
 
 namespace Vega.Controllers
 {
@@ -16,29 +12,26 @@ namespace Vega.Controllers
     [ApiController]
     public class VehiclesController : ControllerBase
     {
-        private readonly VegaDbContext _context;
-        private readonly IMapper _mapper;
+        private readonly IMapper mapper;
+        private readonly IVehicleRepository repo;
+        private readonly IUnitOfWork unitOfWork;
 
-        public VehiclesController(VegaDbContext context, IMapper mapper)
+        public VehiclesController(IMapper mapper, IVehicleRepository repo, IUnitOfWork unitOfWork)
         {
-            _context = context;
-            _mapper = mapper;
+            this.mapper = mapper;
+            this.repo = repo;
+            this.unitOfWork = unitOfWork;
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetVehicle(int id)
         {
-            var vehicle = await _context.Vehicles
-                .Include(v => v.Features)
-                    .ThenInclude(vf => vf.Feature)
-                .Include(v => v.Model)
-                    .ThenInclude(m => m.Make)
-                .SingleOrDefaultAsync(v => v.Id == id).ConfigureAwait(false);
+            var vehicle = await repo.GetVehicle(id);
 
             if (vehicle == null)
                 return NotFound();
 
-            var result = _mapper.Map<Vehicle, VehicleResource>(vehicle);
+            var result = mapper.Map<Vehicle, VehicleResource>(vehicle);
 
             return Ok(result);
         }
@@ -49,12 +42,14 @@ namespace Vega.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var vehicle = _mapper.Map<SaveVehicleResource, Vehicle>(vehicleResource);
+            var vehicle = mapper.Map<SaveVehicleResource, Vehicle>(vehicleResource);
             vehicle.LastUpdate = DateTime.Now;
-            _context.Vehicles.Add(vehicle);
-            await _context.SaveChangesAsync();
+            repo.AddVehicle(vehicle);
+            await unitOfWork.CompleteAsync();
 
-            var result = _mapper.Map<Vehicle, SaveVehicleResource>(vehicle);
+            vehicle = await repo.GetVehicle(vehicle.Id);
+
+            var result = mapper.Map<Vehicle, VehicleResource>(vehicle);
 
             return Ok(result);
         }
@@ -65,17 +60,19 @@ namespace Vega.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var vehicle = await _context.Vehicles.Include(v => v.Features).SingleOrDefaultAsync(v => v.Id == id);
+            var vehicle = await repo.GetVehicle(id);
 
             if (vehicle == null)
                 return NotFound();
 
-            _mapper.Map(vehicleResource, vehicle);
+            mapper.Map(vehicleResource, vehicle);
             vehicle.LastUpdate = DateTime.Now;
-            
-            await _context.SaveChangesAsync();
 
-            var result = _mapper.Map<Vehicle, SaveVehicleResource>(vehicle);
+            await unitOfWork.CompleteAsync();
+
+            vehicle = await repo.GetVehicle(vehicle.Id).ConfigureAwait(false);
+
+            var result = mapper.Map<Vehicle, VehicleResource>(vehicle);
 
             return Ok(result);
         }
@@ -83,14 +80,14 @@ namespace Vega.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteVehicle(int id)
         {
-            var vehicle = await _context.Vehicles.Include(v => v.Features).SingleOrDefaultAsync(v => v.Id == id);
+            var vehicle = await repo.GetVehicle(id, false);
 
             if (vehicle == null)
                 return NotFound();
 
-            _context.Vehicles.Remove(vehicle);
+            repo.RemoveVehicle(vehicle);
 
-            await _context.SaveChangesAsync();
+            await unitOfWork.CompleteAsync();
 
             return Ok(id);
         }
